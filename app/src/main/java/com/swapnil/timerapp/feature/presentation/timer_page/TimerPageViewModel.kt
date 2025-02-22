@@ -1,38 +1,95 @@
 package com.swapnil.timerapp.feature.presentation.timer_page
 
+import android.app.ActivityManager
+import android.app.Application
 import android.content.Context
+import android.content.Context.ACTIVITY_SERVICE
+import android.content.Intent
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.swapnil.timerapp.feature.data.dataSource.PreferencesKeys
+import com.swapnil.timerapp.feature.data.dataSource.dataStore
 import com.swapnil.timerapp.feature.domain.models.TimeType
-import com.swapnil.timerapp.feature.domain.repositories.TimerRepository
+import com.swapnil.timerapp.feature.domain.models.TimerData
+import com.swapnil.timerapp.feature.domain.models.getTwoDigits
+import com.swapnil.timerapp.feature.domain.models.toTimerData
+import com.swapnil.timerapp.feature.presentation.services.TimerService
+import com.swapnil.timerapp.feature.presentation.services.toTime
 import com.swapnil.timerapp.feature.presentation.util.AlarmToneUtil
 import com.swapnil.timerapp.feature.presentation.util.TimerUtil
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class TimerPageViewModel(
-    context: Context,
-    private val repository: TimerRepository,
+    private val context: Application,
 ) : ViewModel() {
 
     private var _state = MutableStateFlow(TimerPageState())
     val state = _state.asStateFlow()
 
 
-    private var timer = TimerUtil()
+    //private var timer = TimerUtil()
     private val ringtoneUtil = AlarmToneUtil(context)
 
     private var _event = Channel<String>()
     val event = _event.receiveAsFlow()
 
-    private val _notificationContent = MutableStateFlow("Initial Notification Content")
-    val notificationContent = _notificationContent.asStateFlow()
-
-    fun updateNotificationContent(content: String) {
-        _notificationContent.value = content
+    init {
+        viewModelScope.launch {
+            context.dataStore.data.collect { preferences ->
+                preferences[PreferencesKeys.END_TIME]?.let { endTime ->
+                    if (endTime > System.currentTimeMillis()) {
+                        startTimerUpdates(endTime)
+                        startServiceIfNeeded()
+                    }
+                }
+            }
+        }
     }
+
+    private fun startTimerUpdates(endTime: Long) {
+        viewModelScope.launch {
+            while (System.currentTimeMillis() < endTime) {
+                val timer = endTime - System.currentTimeMillis()
+                val formattedTime = timer.toTimerData().formattedTime
+
+                _state.update {
+                    it.copy(
+                        isTimerRunning = true,
+                        timer = formattedTime,
+                    )
+                }
+
+                delay(1000)
+            }
+            _state.update {
+                it.copy(
+                    isTimerRunning = false,
+                    timer = "",
+                )
+            }
+            context.dataStore.edit { it.remove(PreferencesKeys.END_TIME) }
+        }
+    }
+
+    private fun startServiceIfNeeded() {
+        if (!isServiceRunning()) {
+            context.startService(Intent(context, TimerService::class.java))
+        }
+    }
+
+    private fun isServiceRunning(): Boolean {
+        return (context.getSystemService(ACTIVITY_SERVICE) as ActivityManager)
+            .getRunningServices(Integer.MAX_VALUE)
+            .any { it.service.className == TimerService::class.java.name }
+    }
+
 
     fun onAction(action: TimerPageAction) {
         when (action) {
@@ -60,33 +117,45 @@ class TimerPageViewModel(
                 }
             }
 
-            TimerPageAction.OnStart -> {
-                val hour = getTime(TimeType.HOUR)
-                val minute = getTime(TimeType.MINUTE)
-                val second = getTime(TimeType.SECOND)
+            is TimerPageAction.OnStart -> {
 
-                repository.saveTime(TimeType.HOUR, hour)
-                repository.saveTime(TimeType.MINUTE, minute)
-                repository.saveTime(TimeType.SECOND, second)
+                val timeData = TimerData(
+                    hour = getTime(TimeType.HOUR),
+                    minute = getTime(TimeType.MINUTE),
+                    second = getTime(TimeType.SECOND),
+                )
+
+                val endTime = System.currentTimeMillis() + timeData.toMilliseconds()
+
+                viewModelScope.launch{
+                    context.dataStore.edit { it[PreferencesKeys.END_TIME] = endTime }
+                }
 
                 _state.update {
                     it.copy(
                         isTimerRunning = true,
-                        timer = "$hour : $minute : $second",
                     )
                 }
 
-                timerStart()
+                Intent(context, TimerService::class.java).also {
+                    it.action = TimerService.Action.START.toString()
+                    context.startService(it)
+                }
+                //timerStart()
             }
 
-            TimerPageAction.OnStop -> {
+            is TimerPageAction.OnStop -> {
                 _state.update { it.copy(isTimerRunning = false) }
-                timer.stop()
+                //timer.stop()
+                Intent(context, TimerService::class.java).also {
+                    it.action = TimerService.Action.STOP.toString()
+                    context.stopService(it)
+                }
             }
         }
     }
 
-    private fun timerStart() {
+    /*private fun timerStart() {
         val hour = getTime(TimeType.HOUR).toLong() * 60 * 60 * 1000
         val minute = getTime(TimeType.MINUTE).toLong() * 60 * 1000
         val second = getTime(TimeType.SECOND).toLong() * 1000
@@ -107,7 +176,7 @@ class TimerPageViewModel(
             },
         )
 
-    }
+    }*/
 
     private fun getTime(timerType: TimeType): String {
         var time = when (timerType) {
@@ -123,8 +192,4 @@ class TimerPageViewModel(
     }
 
 
-}
-
-fun Long.getTwoDigits(): String {
-    return String.format("%02d", this)
 }

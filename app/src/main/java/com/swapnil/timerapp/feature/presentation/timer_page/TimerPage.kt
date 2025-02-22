@@ -114,18 +114,12 @@ private fun TimerPageScreen(
                 onAction(
                     when(state.isTimerRunning){
                         true -> {
-                            Intent(context, TimerService::class.java).also {
-                                it.action = TimerService.Action.STOP.toString()
-                                context.stopService(it)
-                            }
-                            TimerPageAction.OnStop
+
+                            TimerPageAction.OnStop(context)
                         }
                         false -> {
-                            Intent(context, TimerService::class.java).also {
-                                it.action = TimerService.Action.START.toString()
-                                context.startForegroundService(it)
-                            }
-                            TimerPageAction.OnStart
+
+                            TimerPageAction.OnStart(context)
                         }
                     }
                 )

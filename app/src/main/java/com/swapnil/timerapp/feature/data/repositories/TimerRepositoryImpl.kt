@@ -2,8 +2,8 @@ package com.swapnil.timerapp.feature.data.repositories
 
 import com.swapnil.timerapp.feature.data.dataSource.TimerDataStore
 import com.swapnil.timerapp.feature.domain.models.TimeType
+import com.swapnil.timerapp.feature.domain.models.getTwoDigits
 import com.swapnil.timerapp.feature.domain.repositories.TimerRepository
-import com.swapnil.timerapp.feature.presentation.timer_page.getTwoDigits
 
 class TimerRepositoryImpl(
     private val dataStore: TimerDataStore

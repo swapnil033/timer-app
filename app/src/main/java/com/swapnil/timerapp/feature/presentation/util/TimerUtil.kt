@@ -3,7 +3,7 @@ package com.swapnil.timerapp.feature.presentation.util
 import android.os.CountDownTimer
 import com.swapnil.timerapp.feature.data.dataSource.TimerDataStore
 import com.swapnil.timerapp.feature.domain.models.TimerData
-import com.swapnil.timerapp.feature.presentation.timer_page.getTwoDigits
+import com.swapnil.timerapp.feature.domain.models.getTwoDigits
 import kotlinx.coroutines.flow.update
 import java.util.Timer
 import kotlin.time.Duration
@@ -29,7 +29,6 @@ class TimerUtil {
                     hour = hours,
                     minute = minutes,
                     second = seconds,
-                    time = time,
                 )
 
                 onTick(timerData)

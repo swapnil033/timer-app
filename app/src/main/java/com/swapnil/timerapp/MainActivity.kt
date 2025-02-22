@@ -27,10 +27,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             TimerAppTheme {
 
-                val context = LocalContext.current
-
                 val viewModel by viewModels<TimerPageViewModel> {
-                    TimerPageViewModelFactory(context)
+                    TimerPageViewModelFactory(application)
                 }
 
                 TimerPageScreenRoot(
