@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.swapnil.timerapp.feature.domain.models.TimeType
 
+@Deprecated("out dated way")
 class TimerDataStore(
     context: Context
 ) {

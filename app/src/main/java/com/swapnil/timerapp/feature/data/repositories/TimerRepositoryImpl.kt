@@ -5,6 +5,7 @@ import com.swapnil.timerapp.feature.domain.models.TimeType
 import com.swapnil.timerapp.feature.domain.models.getTwoDigits
 import com.swapnil.timerapp.feature.domain.repositories.TimerRepository
 
+@Deprecated("out dated way")
 class TimerRepositoryImpl(
     private val dataStore: TimerDataStore
 ): TimerRepository {

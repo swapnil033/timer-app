@@ -5,15 +5,18 @@ import android.app.Application
 import android.content.Context
 import android.content.Context.ACTIVITY_SERVICE
 import android.content.Intent
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.swapnil.timerapp.feature.data.dataSource.PreferencesKeys
-import com.swapnil.timerapp.feature.data.dataSource.dataStore
+import com.swapnil.timerapp.feature.data.dataSource.TimerDataStore2
 import com.swapnil.timerapp.feature.domain.models.TimeType
 import com.swapnil.timerapp.feature.domain.models.TimerData
 import com.swapnil.timerapp.feature.domain.models.getTwoDigits
 import com.swapnil.timerapp.feature.domain.models.toTimerData
+import com.swapnil.timerapp.feature.domain.repositories.TimerRepository
+import com.swapnil.timerapp.feature.domain.repositories.TimerRepository2
 import com.swapnil.timerapp.feature.presentation.services.TimerService
 import com.swapnil.timerapp.feature.presentation.services.toTime
 import com.swapnil.timerapp.feature.presentation.util.AlarmToneUtil
@@ -28,6 +31,7 @@ import kotlinx.coroutines.launch
 
 class TimerPageViewModel(
     private val context: Application,
+    private val timerRepository: TimerRepository2,
 ) : ViewModel() {
 
     private var _state = MutableStateFlow(TimerPageState())
@@ -42,7 +46,8 @@ class TimerPageViewModel(
 
     init {
         viewModelScope.launch {
-            context.dataStore.data.collect { preferences ->
+
+            timerRepository.getTimeFlow().collect { preferences ->
                 preferences[PreferencesKeys.END_TIME]?.let { endTime ->
                     if (endTime > System.currentTimeMillis()) {
                         startTimerUpdates(endTime)
@@ -59,6 +64,7 @@ class TimerPageViewModel(
                 val timer = endTime - System.currentTimeMillis()
                 val formattedTime = timer.toTimerData().formattedTime
 
+                Log.d("VM-TIME-TAG", "startTimerUpdates: $formattedTime")
                 _state.update {
                     it.copy(
                         isTimerRunning = true,
@@ -74,7 +80,8 @@ class TimerPageViewModel(
                     timer = "",
                 )
             }
-            context.dataStore.edit { it.remove(PreferencesKeys.END_TIME) }
+
+            timerRepository.removeTime()
         }
     }
 
@@ -128,7 +135,7 @@ class TimerPageViewModel(
                 val endTime = System.currentTimeMillis() + timeData.toMilliseconds()
 
                 viewModelScope.launch{
-                    context.dataStore.edit { it[PreferencesKeys.END_TIME] = endTime }
+                    timerRepository.saveTime(endTime)
                 }
 
                 _state.update {

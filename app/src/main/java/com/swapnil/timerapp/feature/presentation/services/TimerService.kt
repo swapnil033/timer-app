@@ -12,10 +12,9 @@ import androidx.core.app.NotificationCompat
 import com.swapnil.timerapp.R
 import com.swapnil.timerapp.TimerApp
 import com.swapnil.timerapp.feature.data.dataSource.PreferencesKeys
-import com.swapnil.timerapp.feature.data.dataSource.dataStore
-import com.swapnil.timerapp.feature.data.repositories.TimerRepositoryImpl
-import com.swapnil.timerapp.feature.domain.models.TimeType
-import com.swapnil.timerapp.feature.domain.repositories.TimerRepository
+import com.swapnil.timerapp.feature.data.dataSource.TimerDataStore2
+import com.swapnil.timerapp.feature.data.repositories.TimerRepository2Impl
+import com.swapnil.timerapp.feature.domain.repositories.TimerRepository2
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,6 +30,8 @@ class TimerService: Service() {
 
     private lateinit var notificationManager : NotificationManager
 
+    private lateinit var timerRepository: TimerRepository2
+
     override fun onBind(p0: Intent?): IBinder? {
         return null
     }
@@ -38,6 +39,8 @@ class TimerService: Service() {
     override fun onCreate() {
         super.onCreate()
 
+        val dataStore = TimerDataStore2(this)
+        timerRepository = TimerRepository2Impl(dataStore)
     }
 
 
@@ -97,8 +100,9 @@ class TimerService: Service() {
                 // Perform background work
                 while (true){
 
-                    val endTime = dataStore.data.map { it[PreferencesKeys.END_TIME] }.first()
-                    if (endTime == null || endTime < System.currentTimeMillis()) {
+                    val endTime = timerRepository.getTime()
+
+                    if (endTime < System.currentTimeMillis()) {
                         stopSelf()
                         break
                     }
@@ -111,6 +115,7 @@ class TimerService: Service() {
                     updateNotification(time)
 
                     delay(1000) // Wait for 1 second
+
                 }
             }
         }

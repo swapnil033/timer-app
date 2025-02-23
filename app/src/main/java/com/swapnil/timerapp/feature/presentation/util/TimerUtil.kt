@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.update
 import java.util.Timer
 import kotlin.time.Duration
 
+
+@Deprecated("out dated way")
 class TimerUtil {
 
     private var timer: CountDownTimer? = null
