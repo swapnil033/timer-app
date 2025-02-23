@@ -87,7 +87,10 @@ class TimerPageViewModel(
 
     private fun startServiceIfNeeded() {
         if (!isServiceRunning()) {
-            context.startService(Intent(context, TimerService::class.java))
+            Intent(context, TimerService::class.java).also {
+                it.action = TimerService.Action.START.toString()
+                context.startService(it)
+            }
         }
     }
 

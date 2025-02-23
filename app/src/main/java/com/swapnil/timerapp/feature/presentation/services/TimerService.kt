@@ -10,18 +10,17 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.swapnil.timerapp.R
-import com.swapnil.timerapp.TimerApp
-import com.swapnil.timerapp.feature.data.dataSource.PreferencesKeys
 import com.swapnil.timerapp.feature.data.dataSource.TimerDataStore2
 import com.swapnil.timerapp.feature.data.repositories.TimerRepository2Impl
 import com.swapnil.timerapp.feature.domain.repositories.TimerRepository2
+import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationChannelData
+import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationData.Companion.timerNotificationData
+import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class TimerService: Service() {
@@ -32,6 +31,8 @@ class TimerService: Service() {
 
     private lateinit var timerRepository: TimerRepository2
 
+    private lateinit var notificationUtil : NotificationUtil
+
     override fun onBind(p0: Intent?): IBinder? {
         return null
     }
@@ -41,6 +42,7 @@ class TimerService: Service() {
 
         val dataStore = TimerDataStore2(this)
         timerRepository = TimerRepository2Impl(dataStore)
+        notificationUtil = NotificationUtil(application)
     }
 
 
@@ -62,25 +64,10 @@ class TimerService: Service() {
 
     private fun notification(content: String) : NotificationCompat.Builder{
         return NotificationCompat
-            .Builder(this, TimerApp.TIMER_NOTIFICATION_CHANNEL_ID)
+            .Builder(this, NotificationChannelData.timerChannel.id)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Remaining Time")
             .setContentText(content)
-    }
-
-    private fun updateNotification(content: String){
-
-        /*if(content == "00 : 00 : 00") {
-            notificationManager.cancel(notificationId)
-            stop()
-            return
-        }*/
-
-        Log.d("SERVICE-TIME-TAG", "updateNotification: $content")
-        val notification = notification(content).build()
-        notification.flags = Notification.FLAG_ONGOING_EVENT
-        notificationManager.notify(notificationId, notification)
-
     }
 
     private fun stop(){
@@ -90,7 +77,10 @@ class TimerService: Service() {
 
     private fun start() {
 
-        val notification = notification("00:00:00").build()
+        val notificationData = timerNotificationData.copy(content = "00:00:00")
+        val notification = notificationUtil
+            .buildNotification(this, notificationData)
+            .build()
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -119,6 +109,27 @@ class TimerService: Service() {
                 }
             }
         }
+
+    }
+
+    private fun updateNotification(content: String){
+
+        /*if(content == "00 : 00 : 00") {
+            notificationManager.cancel(notificationId)
+            stop()
+            return
+        }*/
+
+        Log.d("SERVICE-TIME-TAG", "updateNotification: $content")
+
+        val notificationData = timerNotificationData.copy(content = content)
+        val notification = notificationUtil
+            .buildNotification(this, notificationData)
+            .build()
+
+
+        notification.flags = Notification.FLAG_ONGOING_EVENT
+        notificationManager.notify(notificationId, notification)
 
     }
 
