@@ -11,5 +11,10 @@ data class NotificationData(
             title = "Remaining Time",
             content = ""
         )
+        val alertNotificationData = NotificationData(
+            channel = NotificationChannelData.alarmChannel,
+            title = "Let's Roll",
+            content = "time to roll new character!"
+        )
     }
 }

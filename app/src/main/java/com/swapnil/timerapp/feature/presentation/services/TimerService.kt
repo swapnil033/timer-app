@@ -2,6 +2,7 @@ package com.swapnil.timerapp.feature.presentation.services
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -13,7 +14,9 @@ import com.swapnil.timerapp.R
 import com.swapnil.timerapp.feature.data.dataSource.TimerDataStore2
 import com.swapnil.timerapp.feature.data.repositories.TimerRepository2Impl
 import com.swapnil.timerapp.feature.domain.repositories.TimerRepository2
+import com.swapnil.timerapp.feature.presentation.alert_screen.AlertScreenActivity
 import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationChannelData
+import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationData.Companion.alertNotificationData
 import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationData.Companion.timerNotificationData
 import com.swapnil.timerapp.feature.presentation.util.notificationUtil.NotificationUtil
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +29,7 @@ import kotlinx.coroutines.launch
 class TimerService: Service() {
 
     private val notificationId = 1
+    private val alertNotificationId = 2
 
     private lateinit var notificationManager : NotificationManager
 
@@ -93,6 +97,7 @@ class TimerService: Service() {
                     val endTime = timerRepository.getTime()
 
                     if (endTime < System.currentTimeMillis()) {
+                        triggerAlarm()
                         stopSelf()
                         break
                     }
@@ -110,6 +115,33 @@ class TimerService: Service() {
             }
         }
 
+    }
+
+    private fun triggerAlarm() {
+        val alarmIntent = Intent(this, AlertScreenActivity::class.java).apply {
+
+            putExtra("notification_id", alertNotificationId)  // Pass Notification ID
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            alarmIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationData = alertNotificationData
+
+
+        val notification = notificationUtil
+            .buildNotificationWithIntend(this, notificationData, fullScreenPendingIntent)
+            .build()
+
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.notify(alertNotificationId, notification)
     }
 
     private fun updateNotification(content: String){
